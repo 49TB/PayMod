@@ -1,2 +1,2 @@
 # PayMod
-Plays animations when getting paid.
+Plays animations when getting paid. 
