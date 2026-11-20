@@ -1,0 +1,17 @@
+{
+  "paymentfx.config.title": "PaymentFX",
+  "paymentfx.config.general": "General",
+  "paymentfx.config.enabled": "Enable PaymentFX",
+  "paymentfx.config.volume": "Master volume (%)",
+  "paymentfx.config.thresholds": "Tier thresholds",
+  "paymentfx.config.thresholds.tooltip": "Amounts are in whole dollars. A payment starts the tier whose minimum it reaches or exceeds.",
+  "paymentfx.config.tier2": "Tier 2 (fireworks) starts at $",
+  "paymentfx.config.tier3": "Tier 3 (slots) starts at $",
+  "paymentfx.config.tier4": "Tier 4 (nuke) starts at $",
+  "paymentfx.config.tier5": "Tier 5 (black hole) starts at $",
+  "paymentfx.config.reset": "Reset to defaults",
+  "paymentfx.test.usage": "Usage: /testpay <player> <amount>  e.g. /testpay cobhaa 10M",
+  "paymentfx.test.invalid": "Could not read that amount. Try 500K, 10M, 1B, 10B or a plain number.",
+  "paymentfx.test.disabled": "PaymentFX is disabled in the config.",
+  "paymentfx.test.sent": "%s paid you %s  (Tier %s)"
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "paymentfx",
+  "version": "${version}",
+  "name": "PaymentFX",
+  "description": "Client-side payment notifications with escalating HUD, world and sound effects. Detects economy chat lines such as 'cobhaa paid you 10M' and celebrates them. Purely visual: no blocks or entities are ever modified.",
+  "authors": [
+    "PaymentFX"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/paymentfx/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.paymentfx.PaymentFxClient"
+    ],
+    "modmenu": [
+      "com.paymentfx.PaymentFxModMenu"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "paymentfx.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_dep}",
+    "java": ">=17"
+  },
+  "suggests": {
+    "cloth-config": "*",
+    "modmenu": "*"
+  }
+}
