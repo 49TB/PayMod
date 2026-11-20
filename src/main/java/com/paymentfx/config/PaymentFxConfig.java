@@ -12,21 +12,33 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** JSON-backed settings: master switch, volume and the four tier boundaries. */
+/** JSON-backed settings: master switch, volume, the five tier thresholds, per-tier toggles and the chat format. */
 public final class PaymentFxConfig {
     public static final Logger LOGGER = LoggerFactory.getLogger("paymentfx");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+    public static final String DEFAULT_CHAT_PATTERN = "{player} paid you ${amount}";
 
     private static PaymentFxConfig instance;
 
     public boolean enabled = true;
     public float masterVolume = 1.0F;
 
-    /** Tier 1 covers everything below tier2Min. */
+    /** Minimum amount that starts each tier; evaluated from tier 5 downwards. */
+    public long tier1Min = 0L;
     public long tier2Min = 10_000_000L;
     public long tier3Min = 500_000_000L;
     public long tier4Min = 1_000_000_000L;
     public long tier5Min = 10_000_000_000L;
+
+    public boolean tier1Enabled = true;
+    public boolean tier2Enabled = true;
+    public boolean tier3Enabled = true;
+    public boolean tier4Enabled = true;
+    public boolean tier5Enabled = true;
+
+    /** Server chat line template; {@code {player}} and {@code {amount}} are replaced by regex groups. */
+    public String chatPattern = DEFAULT_CHAT_PATTERN;
 
     public static PaymentFxConfig get() {
         if (instance == null) {
@@ -70,11 +82,14 @@ public final class PaymentFxConfig {
         }
     }
 
-    /** Clamps volume and keeps the tiers strictly ascending. */
+    /** Clamps volume, keeps the thresholds ascending and repairs a missing chat pattern. */
     public static void normalize(PaymentFxConfig config) {
         config.masterVolume = Math.max(0.0F, Math.min(1.0F, config.masterVolume));
-        if (config.tier2Min < 1L) {
-            config.tier2Min = 1L;
+        if (config.tier1Min < 0L) {
+            config.tier1Min = 0L;
+        }
+        if (config.tier2Min <= config.tier1Min) {
+            config.tier2Min = safeAdd(config.tier1Min, 1L);
         }
         if (config.tier3Min <= config.tier2Min) {
             config.tier3Min = safeAdd(config.tier2Min, 1L);
@@ -84,6 +99,9 @@ public final class PaymentFxConfig {
         }
         if (config.tier5Min <= config.tier4Min) {
             config.tier5Min = safeAdd(config.tier4Min, 1L);
+        }
+        if (config.chatPattern == null || config.chatPattern.isBlank()) {
+            config.chatPattern = DEFAULT_CHAT_PATTERN;
         }
     }
 

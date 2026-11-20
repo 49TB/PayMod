@@ -14,5 +14,6 @@
   "paymentfx.test.usage": "Usage: /testpay <player> <amount>  e.g. /testpay cobhaa 10M",
   "paymentfx.test.invalid": "Could not read that amount. Try 500K, 10M, 1B, 10B or a plain number.",
   "paymentfx.test.disabled": "PaymentFX is disabled in the config.",
+  "paymentfx.test.all_off": "Every tier that amount reaches is switched off in the config.",
   "paymentfx.test.sent": "%s paid you %s  (Tier %s)"
 }

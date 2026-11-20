@@ -48,8 +48,12 @@ public final class TestPayCommand {
                                                 context.getSource().sendFeedback(Component.translatable("paymentfx.test.disabled"));
                                                 return 0;
                                             }
-                                            EffectManager.INSTANCE.trigger(player, value, MoneyFormat.dollars(value), true);
                                             Tier tier = Tier.of(value, config);
+                                            if (tier == null) {
+                                                context.getSource().sendFeedback(Component.translatable("paymentfx.test.all_off"));
+                                                return 0;
+                                            }
+                                            EffectManager.INSTANCE.trigger(player, value, MoneyFormat.dollars(value), true);
                                             context.getSource().sendFeedback(Component.translatable("paymentfx.test.sent",
                                                     player, MoneyFormat.dollars(value), tier.number + " - " + tier.label));
                                             return 1;

@@ -12,10 +12,6 @@ base {
 
 repositories {
     maven {
-        name = 'Shedaniel'
-        url = 'https://maven.shedaniel.me/'
-    }
-    maven {
         name = 'TerraformersMC'
         url = 'https://maven.terraformersmc.com/releases/'
     }
@@ -33,10 +29,9 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Optional integrations: only loaded when the user has them installed.
-    modCompileOnly "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+    // Optional integration: only loaded when the user has Mod Menu installed. The config screen
+    // itself is pure vanilla, so no config library is needed at all.
     modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
-    modLocalRuntime "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
     modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 }
 

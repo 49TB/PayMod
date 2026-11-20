@@ -1,6 +1,7 @@
 package com.paymentfx.effect;
 
 import com.paymentfx.config.PaymentFxConfig;
+import com.paymentfx.util.MoneyFormat;
 import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
@@ -15,6 +16,8 @@ public final class EffectManager {
 
     private final List<ActiveEffect> effects = new ArrayList<>();
     private long nextId = 1L;
+    /** Keeps previews from the config screen running even while the mod itself is switched off. */
+    private long previewUntilMs;
 
     private EffectManager() {
     }
@@ -24,7 +27,28 @@ public final class EffectManager {
         if ((!config.enabled && !force) || value <= 0L || sender == null || sender.isEmpty()) {
             return;
         }
-        ActiveEffect effect = new ActiveEffect(nextId++, Tier.of(value, config), sender, value, amountText, System.currentTimeMillis());
+        Tier tier = Tier.of(value, config);
+        if (tier == null) {
+            // Every tier the amount reaches is switched off: no animation at all.
+            return;
+        }
+        spawn(tier, sender, value, amountText);
+    }
+
+    /** Plays one tier on demand for the config screen's Test buttons, ignoring thresholds and switches. */
+    public void preview(Tier tier) {
+        if (tier == null) {
+            return;
+        }
+        Minecraft client = Minecraft.getInstance();
+        String sender = client.player != null ? client.player.getGameProfile().name() : "TestPlayer";
+        long value = Math.max(1L, tier.threshold(PaymentFxConfig.get()));
+        this.previewUntilMs = System.currentTimeMillis() + tier.durationMs + 500L;
+        spawn(tier, sender, value, MoneyFormat.dollars(value));
+    }
+
+    private void spawn(Tier tier, String sender, long value, String amountText) {
+        ActiveEffect effect = new ActiveEffect(nextId++, tier, sender, value, amountText, System.currentTimeMillis());
         if (effects.size() >= MAX_EFFECTS) {
             ActiveEffect dropped = effects.remove(0);
             SoundFx.purge(dropped.id);
@@ -35,7 +59,7 @@ public final class EffectManager {
 
     public void tick(Minecraft client) {
         PaymentFxConfig config = PaymentFxConfig.get();
-        if (!config.enabled) {
+        if (!config.enabled && System.currentTimeMillis() >= this.previewUntilMs) {
             if (!effects.isEmpty()) {
                 reset();
             }
@@ -58,6 +82,7 @@ public final class EffectManager {
 
     /** Drops every animation and any queued sound. Called on disconnect and when disabled. */
     public void reset() {
+        this.previewUntilMs = 0L;
         effects.clear();
         SoundFx.clear();
         WorldFx.hasShake = false;
@@ -67,6 +92,11 @@ public final class EffectManager {
 
     public List<ActiveEffect> effects() {
         return effects;
+    }
+
+    /** Timestamp until which a config-screen preview keeps the overlay drawing while disabled. */
+    public long previewUntil() {
+        return this.previewUntilMs;
     }
 
     public ActiveEffect newest(Tier minimumExcluded) {

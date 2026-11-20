@@ -26,7 +26,7 @@ public final class HudFx {
 
     public static void render(GuiGraphics context, DeltaTracker tickCounter) {
         PaymentFxConfig config = PaymentFxConfig.get();
-        if (!config.enabled) {
+        if (!config.enabled && System.currentTimeMillis() >= EffectManager.INSTANCE.previewUntil()) {
             return;
         }
         Minecraft client = Minecraft.getInstance();
@@ -111,10 +111,12 @@ public final class HudFx {
         }
         float slide = 1.0F - Easing.outCubic(in);
         float nameScale = Draw.fitScale(renderer, effect.sender, 2.0F, screenWidth - 90);
+        float lineScale = 1.1F;
         int nameWidth = Math.round(renderer.width(effect.sender) * nameScale);
         String line = "paid you " + effect.amountText;
-        int panelWidth = Math.max(280, Math.max(nameWidth, renderer.width(line)) + 56);
-        int panelHeight = 56;
+        int lineWidth = Math.round(renderer.width(line) * lineScale);
+        int panelWidth = Math.max(300, Math.max(nameWidth, lineWidth) + 56);
+        int panelHeight = 52;
         int x = (screenWidth - panelWidth) / 2;
         int y = 14 - Math.round(slide * 60.0F);
 
@@ -127,10 +129,12 @@ public final class HudFx {
         context.fill(x, y + 1, x + 2, y + panelHeight - 1, Draw.withAlpha(0xFFFFC43C, alpha * 0.5F));
         context.fill(x + panelWidth - 2, y + 1, x + panelWidth, y + panelHeight - 1, Draw.withAlpha(0xFFFFC43C, alpha * 0.5F));
 
-        Draw.gradientTextV(context, renderer, effect.sender, (screenWidth - nameWidth) / 2, y + 8, nameScale,
-                Draw.withAlpha(0xFFFFE3A2, alpha), Draw.withAlpha(0xFFFF9A16, alpha), true);
-        context.drawCenteredString(renderer, Component.literal(line), screenWidth / 2,
-                y + 10 + Math.round(renderer.lineHeight * nameScale) + 2, Draw.withAlpha(0xFFFFFFFF, alpha));
+        int nameY = y + 9;
+        Draw.gradientTextV(context, renderer, effect.sender, (screenWidth - nameWidth) / 2, nameY, nameScale,
+                Draw.withAlpha(0xFFFFD700, alpha), Draw.withAlpha(0xFFFFF3B0, alpha), true);
+        int lineY = nameY + Math.round(renderer.lineHeight * nameScale) + 4;
+        Draw.textCentered(context, renderer, line, screenWidth / 2, lineY, lineScale,
+                Draw.withAlpha(0xFFFFFFFF, alpha), true);
     }
 
     // ------------------------------------------------------------------ tier 4

@@ -1,6 +1,7 @@
 package com.paymentfx;
 
 import com.paymentfx.chat.PaymentListener;
+import com.paymentfx.command.PaymentFxCommand;
 import com.paymentfx.command.TestPayCommand;
 import com.paymentfx.config.PaymentFxConfig;
 import com.paymentfx.effect.EffectManager;
@@ -22,6 +23,7 @@ public class PaymentFxClient implements ClientModInitializer {
         PaymentFxConfig.load();
         PaymentListener.register();
         TestPayCommand.register();
+        PaymentFxCommand.register();
 
         // 1.21.9+ replaced HudRenderCallback with identified HUD elements.
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "overlay"), HudFx::render);
@@ -29,10 +31,9 @@ public class PaymentFxClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(EffectManager.INSTANCE::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> EffectManager.INSTANCE.reset());
 
-        PaymentFxConfig.LOGGER.info("PaymentFX ready: tiers at {}, {}, {}, {}",
-                PaymentFxConfig.get().tier2Min,
-                PaymentFxConfig.get().tier3Min,
-                PaymentFxConfig.get().tier4Min,
-                PaymentFxConfig.get().tier5Min);
+        PaymentFxConfig config = PaymentFxConfig.get();
+        PaymentFxConfig.LOGGER.info("PaymentFX ready: tiers at {}, {}, {}, {}, {}; chat format '{}'",
+                config.tier1Min, config.tier2Min, config.tier3Min, config.tier4Min, config.tier5Min,
+                config.chatPattern);
     }
 }
