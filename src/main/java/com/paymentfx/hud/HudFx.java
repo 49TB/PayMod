@@ -89,7 +89,7 @@ public final class HudFx {
         context.fill(x - 3, y + 6, x, y + TOAST_HEIGHT - 6, Draw.withAlpha(0x3310FF6E, alpha));
 
         if (alpha > 0.25F) {
-            Draw.skinFigure(context, Skins.texture(effect.sender), x + 12, y + 8, 1.42F);
+            Draw.skinFigure(context, Skins.texture(effect.sender), x + 12, y + 8, 1.42F, alpha);
         }
 
         String name = Draw.trim(renderer, effect.sender, TOAST_WIDTH - 56);

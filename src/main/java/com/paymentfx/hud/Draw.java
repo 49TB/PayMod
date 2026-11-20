@@ -181,21 +181,33 @@ public final class Draw {
 
     /** 2D standing figure built from the 64x64 skin layout. */
     public static void skinFigure(GuiGraphics context, Identifier texture, int x, int y, float scale) {
+        skinFigure(context, texture, x, y, scale, 1.0F);
+    }
+
+    /** Same figure, faded with the toast it belongs to. */
+    public static void skinFigure(GuiGraphics context, Identifier texture, int x, int y, float scale, float alpha) {
+        if (texture == null) {
+            return;
+        }
+        int tint = withAlpha(0xFFFFFFFF, alpha);
+        if (((tint >>> 24) & 0xFF) <= 2) {
+            return;
+        }
         context.pose().pushMatrix();
         context.pose().translate(x, y);
         context.pose().scale(scale, scale);
-        skinPart(context, texture, 4, 0, 8, 8, 8, 8);      // head
-        skinPart(context, texture, 4, 8, 20, 20, 8, 12);    // body
-        skinPart(context, texture, 0, 8, 44, 20, 4, 12);    // right arm
-        skinPart(context, texture, 12, 8, 36, 52, 4, 12);   // left arm
-        skinPart(context, texture, 4, 20, 4, 20, 4, 12);    // right leg
-        skinPart(context, texture, 8, 20, 20, 52, 4, 12);   // left leg
-        skinPart(context, texture, 4, 0, 40, 8, 8, 8);      // hat layer
+        skinPart(context, texture, 4, 0, 8, 8, 8, 8, tint);      // head
+        skinPart(context, texture, 4, 8, 20, 20, 8, 12, tint);    // body
+        skinPart(context, texture, 0, 8, 44, 20, 4, 12, tint);    // right arm
+        skinPart(context, texture, 12, 8, 36, 52, 4, 12, tint);   // left arm
+        skinPart(context, texture, 4, 20, 4, 20, 4, 12, tint);    // right leg
+        skinPart(context, texture, 8, 20, 20, 52, 4, 12, tint);   // left leg
+        skinPart(context, texture, 4, 0, 40, 8, 8, 8, tint);      // hat overlay (front face)
         context.pose().popMatrix();
     }
 
     private static void skinPart(GuiGraphics context, Identifier texture, int x, int y,
-                                 int u, int v, int width, int height) {
-        context.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, 64, 64);
+                                 int u, int v, int width, int height, int tint) {
+        context.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, 64, 64, tint);
     }
 }

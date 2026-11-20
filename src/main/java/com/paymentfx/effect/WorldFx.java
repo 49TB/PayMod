@@ -12,7 +12,11 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -93,7 +97,7 @@ public final class WorldFx {
 
     private static void tickBlackHole(Minecraft client, ClientLevel world, ActiveEffect effect, long elapsed, long now) {
         if (effect.anchor == null) {
-            effect.anchor = frontOfCamera(client, 7.5D);
+            effect.anchor = blackHoleAnchor(client);
         }
         Vec3 center = effect.anchor;
 
@@ -404,6 +408,57 @@ public final class WorldFx {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** Forward distance for the tier 5 anchor, measured on the horizontal plane only. */
+    private static final double BLACK_HOLE_FORWARD = 5.5D;
+    /** Minimum height above the player, and clearance above the block surface below the anchor. */
+    private static final double BLACK_HOLE_PLAYER_CLEARANCE = 2.5D;
+    private static final double BLACK_HOLE_GROUND_CLEARANCE = 3.6D;
+
+    /**
+     * Tier 5 spawn point. Only the player's horizontal yaw is used, so looking straight down (or
+     * up) can no longer bury the black hole; the centre is then lifted above both the player and
+     * the highest terrain found below or around the spawn column.
+     */
+    static Vec3 blackHoleAnchor(Minecraft client) {
+        if (client.player == null || client.level == null) {
+            return Vec3.ZERO;
+        }
+        ClientLevel world = client.level;
+        Vec3 feet = client.player.position();
+        Vec3 heading = Vec3.directionFromRotation(0.0F, client.player.getYRot());
+        Vec3 flat = new Vec3(heading.x, 0.0D, heading.z);
+        if (flat.lengthSqr() < 1.0E-6D) {
+            flat = new Vec3(0.0D, 0.0D, 1.0D);
+        }
+        flat = flat.normalize();
+        double x = feet.x + flat.x * BLACK_HOLE_FORWARD;
+        double z = feet.z + flat.z * BLACK_HOLE_FORWARD;
+        double ground = groundBelow(world, client.player, x, z, feet.y);
+        double y = Math.max(feet.y + BLACK_HOLE_PLAYER_CLEARANCE, ground + BLACK_HOLE_GROUND_CLEARANCE);
+        return new Vec3(x, y, z);
+    }
+
+    /** Highest block surface at (or immediately around) the column, so slopes and walls count. */
+    private static double groundBelow(ClientLevel world, AbstractClientPlayer player, double x, double z, double playerY) {
+        int blockX = Mth.floor(x);
+        int blockZ = Mth.floor(z);
+        double highest = world.getHeight(Heightmap.Types.MOTION_BLOCKING, blockX, blockZ);
+        for (int dx = -3; dx <= 3; dx += 3) {
+            for (int dz = -3; dz <= 3; dz += 3) {
+                highest = Math.max(highest, world.getHeight(Heightmap.Types.MOTION_BLOCKING, blockX + dx, blockZ + dz));
+            }
+        }
+        double from = Math.max(highest + 24.0D, playerY + 12.0D);
+        BlockHitResult hit = world.clip(new ClipContext(
+                new Vec3(x, from, z),
+                new Vec3(x, world.getMinY() - 1.0D, z),
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                player));
+        double surface = hit.getType() == HitResult.Type.BLOCK ? hit.getLocation().y : world.getMinY();
+        return Math.max(highest, surface);
+    }
 
     static Vec3 frontOfCamera(Minecraft client, double distance) {
         if (client.player == null) {
