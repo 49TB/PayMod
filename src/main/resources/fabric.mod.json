@@ -26,10 +26,10 @@
     }
   ],
   "depends": {
-    "fabricloader": ">=0.15.0",
+    "fabricloader": ">=0.18.1",
     "fabric-api": "*",
     "minecraft": "${minecraft_dep}",
-    "java": ">=17"
+    "java": ">=21"
   },
   "suggests": {
     "cloth-config": "*",

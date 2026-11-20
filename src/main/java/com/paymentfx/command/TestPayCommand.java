@@ -7,7 +7,7 @@ import com.paymentfx.effect.Tier;
 import com.paymentfx.util.MoneyFormat;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 /** `/testpay &lt;player&gt; &lt;amount&gt;` — previews any tier without a real payment. */
 public final class TestPayCommand {
@@ -23,7 +23,7 @@ public final class TestPayCommand {
                 dispatcher.register(ClientCommandManager.literal("testpay")
                         .then(ClientCommandManager.argument("player", StringArgumentType.word())
                                 .suggests((context, builder) -> {
-                                    for (String name : context.getSource().getPlayerNames()) {
+                                    for (String name : context.getSource().getOnlinePlayerNames()) {
                                         builder.suggest(name);
                                     }
                                     return builder.buildFuture();
@@ -40,17 +40,17 @@ public final class TestPayCommand {
                                             String raw = StringArgumentType.getString(context, "amount");
                                             long value = MoneyFormat.parse(raw);
                                             if (value <= 0L) {
-                                                context.getSource().sendFeedback(Text.translatable("paymentfx.test.invalid"));
+                                                context.getSource().sendFeedback(Component.translatable("paymentfx.test.invalid"));
                                                 return 0;
                                             }
                                             PaymentFxConfig config = PaymentFxConfig.get();
                                             if (!config.enabled) {
-                                                context.getSource().sendFeedback(Text.translatable("paymentfx.test.disabled"));
+                                                context.getSource().sendFeedback(Component.translatable("paymentfx.test.disabled"));
                                                 return 0;
                                             }
                                             EffectManager.INSTANCE.trigger(player, value, MoneyFormat.dollars(value), true);
                                             Tier tier = Tier.of(value, config);
-                                            context.getSource().sendFeedback(Text.translatable("paymentfx.test.sent",
+                                            context.getSource().sendFeedback(Component.translatable("paymentfx.test.sent",
                                                     player, MoneyFormat.dollars(value), tier.number + " - " + tier.label));
                                             return 1;
                                         })))));

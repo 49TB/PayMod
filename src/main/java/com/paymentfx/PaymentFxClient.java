@@ -9,19 +9,23 @@ import com.paymentfx.hud.HudFx;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.resources.Identifier;
 
 /** Client-only entrypoint. Nothing here touches the world data; all effects are rendered locally. */
 public class PaymentFxClient implements ClientModInitializer {
+    public static final String MOD_ID = "paymentfx";
+
     @Override
     public void onInitializeClient() {
         PaymentFxConfig.load();
         PaymentListener.register();
         TestPayCommand.register();
 
-        HudRenderCallback.EVENT.register(HudFx::render);
-        WorldRenderEvents.LAST.register(WorldFx::render);
+        // 1.21.9+ replaced HudRenderCallback with identified HUD elements.
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "overlay"), HudFx::render);
+        WorldRenderEvents.AFTER_ENTITIES.register(WorldFx::render);
         ClientTickEvents.END_CLIENT_TICK.register(EffectManager.INSTANCE::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> EffectManager.INSTANCE.reset());
 

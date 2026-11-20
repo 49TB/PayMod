@@ -1,18 +1,6 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
     id 'java'
-}
-
-// Optional version profile: ./gradlew build -Pmc=1.21.1
-def profileName = project.findProperty('mc')
-if (profileName != null) {
-    def profileFile = file("gradle/profiles/${profileName}.properties")
-    if (!profileFile.exists()) {
-        throw new GradleException("Unknown Minecraft profile '${profileName}'. Add gradle/profiles/${profileName}.properties.")
-    }
-    def profile = new Properties()
-    profileFile.withInputStream { profile.load(it) }
-    profile.each { key, value -> project.ext.set(key.toString(), value.toString()) }
 }
 
 version = project.mod_version
@@ -40,7 +28,8 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    // Minecraft 1.21.11 is the last obfuscated release; Fabric API and its docs use Mojang names.
+    mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 

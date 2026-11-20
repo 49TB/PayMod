@@ -1,6 +1,6 @@
 package com.paymentfx.effect;
 
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * One running payment animation. Everything is derived from {@link #startMs} plus a couple of
@@ -17,8 +17,8 @@ public final class ActiveEffect {
     public final long durationMs;
 
     /** World anchors, resolved lazily on the client tick that first needs them. */
-    public Vec3d anchor;
-    public Vec3d target;
+    public Vec3 anchor;
+    public Vec3 target;
 
     private long lastEmitMs;
     private int fired;

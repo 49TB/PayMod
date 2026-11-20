@@ -3,9 +3,9 @@ package com.paymentfx.hud;
 import com.paymentfx.effect.ActiveEffect;
 import com.paymentfx.effect.Timelines;
 import com.paymentfx.util.Easing;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 /** Tier 3: retro casino slot machine with marquee bulbs and three locking reels. */
 public final class SlotMachineRenderer {
@@ -22,7 +22,7 @@ public final class SlotMachineRenderer {
     private SlotMachineRenderer() {
     }
 
-    public static void render(DrawContext context, TextRenderer renderer, ActiveEffect effect, long now, int screenWidth) {
+    public static void render(GuiGraphics context, Font renderer, ActiveEffect effect, long now, int screenWidth) {
         long elapsed = effect.elapsed(now);
         float in = Easing.clamp01(elapsed / 300.0F);
         float out = Easing.clamp01((effect.durationMs - elapsed) / 450.0F);
@@ -53,9 +53,9 @@ public final class SlotMachineRenderer {
         // JACKPOT header
         String header = "JACKPOT";
         float headerScale = 1.8F;
-        int headerWidth = Math.round(renderer.getWidth(header) * headerScale);
+        int headerWidth = Math.round(renderer.width(header) * headerScale);
         Draw.rainbowText(context, renderer, header, (screenWidth - headerWidth) / 2, y + 12, headerScale, now, 42.0F, 0.3F, true);
-        context.drawCenteredTextWithShadow(renderer, Text.literal("~ ~ ~"), screenWidth / 2, y + 30,
+        context.drawCenteredString(renderer, Component.literal("~ ~ ~"), screenWidth / 2, y + 30,
                 Draw.withAlpha(0xFFFFC43C, alpha * 0.6F));
 
         // reels
@@ -70,7 +70,7 @@ public final class SlotMachineRenderer {
 
             context.enableScissor(reelX, reelsY, reelX + REEL_W, reelsY + REEL_H);
             if (locked) {
-                drawLockedReel(context, renderer, reelX, reelsY, elapsed, i, alpha);
+                drawLockedReel(context, renderer, reelX, reelsY, elapsed, alpha);
             } else {
                 drawSpinningReel(context, renderer, reelX, reelsY, elapsed, i, alpha);
             }
@@ -85,14 +85,14 @@ public final class SlotMachineRenderer {
         // payout text under the machine
         String name = effect.sender;
         float nameScale = Draw.fitScale(renderer, name, 2.0F, screenWidth - 70);
-        int nameWidth = Math.round(renderer.getWidth(name) * nameScale);
+        int nameWidth = Math.round(renderer.width(name) * nameScale);
         Draw.gradientTextV(context, renderer, name, (screenWidth - nameWidth) / 2, y + FRAME_H + 10, nameScale,
                 Draw.withAlpha(0xFFFFF0C0, alpha), Draw.withAlpha(0xFFE8A21C, alpha), true);
-        context.drawCenteredTextWithShadow(renderer, Text.literal("paid you " + effect.amountText), screenWidth / 2,
-                y + FRAME_H + 14 + Math.round(renderer.fontHeight * nameScale), Draw.withAlpha(0xFFFFFFFF, alpha));
+        context.drawCenteredString(renderer, Component.literal("paid you " + effect.amountText), screenWidth / 2,
+                y + FRAME_H + 14 + Math.round(renderer.lineHeight * nameScale), Draw.withAlpha(0xFFFFFFFF, alpha));
     }
 
-    private static void drawSpinningReel(DrawContext context, TextRenderer renderer, int reelX, int reelY,
+    private static void drawSpinningReel(GuiGraphics context, Font renderer, int reelX, int reelY,
                                          long elapsed, int index, float alpha) {
         long lockAt = Timelines.SLOT_LOCKS[index];
         float progress = Easing.clamp01(elapsed / (float) lockAt);
@@ -107,8 +107,8 @@ public final class SlotMachineRenderer {
         }
     }
 
-    private static void drawLockedReel(DrawContext context, TextRenderer renderer, int reelX, int reelY,
-                                       long elapsed, int index, float alpha) {
+    private static void drawLockedReel(GuiGraphics context, Font renderer, int reelX, int reelY,
+                                       long elapsed, float alpha) {
         context.fill(reelX + 6, reelY + 6, reelX + REEL_W - 6, reelY + REEL_H - 6, Draw.withAlpha(0x77FFD24A, alpha * 0.9F));
         context.fill(reelX + 10, reelY + 10, reelX + REEL_W - 10, reelY + REEL_H - 10, Draw.withAlpha(0xCC16351F, alpha));
         float pulse = 1.0F + 0.12F * Easing.wave(elapsed, 260.0D);
@@ -118,13 +118,13 @@ public final class SlotMachineRenderer {
                 Draw.withAlpha(0xFFFFF3B0, alpha * 0.55F));
     }
 
-    private static void drawSymbol(DrawContext context, TextRenderer renderer, String symbol,
+    private static void drawSymbol(GuiGraphics context, Font renderer, String symbol,
                                    int centerX, int centerY, float scale, int color) {
-        context.getMatrices().push();
-        context.getMatrices().translate(centerX, centerY, 0.0F);
-        context.getMatrices().scale(scale, scale, 1.0F);
-        int width = renderer.getWidth(symbol);
-        context.drawText(renderer, symbol, -width / 2, -renderer.fontHeight / 2, color, true);
-        context.getMatrices().pop();
+        context.pose().pushMatrix();
+        context.pose().translate(centerX, centerY);
+        context.pose().scale(scale, scale);
+        int width = renderer.width(symbol);
+        context.drawString(renderer, symbol, -width / 2, -renderer.lineHeight / 2, color, true);
+        context.pose().popMatrix();
     }
 }

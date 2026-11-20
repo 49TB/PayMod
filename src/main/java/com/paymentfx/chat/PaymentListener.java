@@ -2,9 +2,9 @@ package com.paymentfx.chat;
 
 import com.paymentfx.effect.EffectManager;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.network.chat.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -30,34 +30,35 @@ public final class PaymentListener {
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> handle(message, true));
     }
 
-    private static void handle(Text message, boolean playerChat) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || client.world == null) {
+    private static void handle(Component message, boolean playerChat) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || client.level == null) {
             return;
         }
-        Payment payment = PaymentParser.parse(message.getString());
+        String raw = message.getString();
+        Payment payment = PaymentParser.parse(raw);
         if (payment == null) {
             return;
         }
-        String self = client.player.getGameProfile().getName();
+        String self = client.player.getGameProfile().name();
         if (self != null && self.equalsIgnoreCase(payment.sender())) {
             return;
         }
         if (playerChat && !isListedPlayer(client, payment.sender())) {
             return;
         }
-        if (isDuplicate(message.getString())) {
+        if (isDuplicate(raw)) {
             return;
         }
         EffectManager.INSTANCE.trigger(payment.sender(), payment.value(), payment.amountText(), false);
     }
 
-    private static boolean isListedPlayer(MinecraftClient client, String name) {
-        if (client.getNetworkHandler() == null) {
+    private static boolean isListedPlayer(Minecraft client, String name) {
+        if (client.getConnection() == null) {
             return false;
         }
-        for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
-            if (entry.getProfile().getName().equalsIgnoreCase(name)) {
+        for (PlayerInfo entry : client.getConnection().getOnlinePlayers()) {
+            if (entry.getProfile().name().equalsIgnoreCase(name)) {
                 return true;
             }
         }
@@ -79,5 +80,4 @@ public final class PaymentListener {
         }
         return false;
     }
-
 }

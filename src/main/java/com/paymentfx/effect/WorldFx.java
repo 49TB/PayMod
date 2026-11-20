@@ -1,20 +1,21 @@
 package com.paymentfx.effect;
 
 import com.paymentfx.util.Easing;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Heightmap;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.particles.ColorParticleOption;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.List;
@@ -23,7 +24,7 @@ import java.util.Random;
 /**
  * All 3D world work: particles, the client-only nuke model, the black hole, target reticles and
  * the camera shake amplitude. Nothing in this class writes to the world - particles are spawned
- * on the client {@link ClientWorld} only and every mesh is drawn from scratch each frame, so
+ * on the client {@link ClientLevel} only and every mesh is drawn from scratch each frame, so
  * there is no state to leak when an effect ends.
  */
 public final class WorldFx {
@@ -38,8 +39,8 @@ public final class WorldFx {
 
     // ------------------------------------------------------------------ ticking
 
-    public static void tick(MinecraftClient client, ActiveEffect effect, long now) {
-        ClientWorld world = client.world;
+    public static void tick(Minecraft client, ActiveEffect effect, long now) {
+        ClientLevel world = client.level;
         if (world == null || client.player == null) {
             return;
         }
@@ -53,7 +54,7 @@ public final class WorldFx {
         }
     }
 
-    private static void tickFireworks(MinecraftClient client, ClientWorld world, ActiveEffect effect, long elapsed) {
+    private static void tickFireworks(Minecraft client, ClientLevel world, ActiveEffect effect, long elapsed) {
         for (int i = 0; i < Timelines.FIREWORK_BURSTS.length; i++) {
             if (elapsed >= Timelines.FIREWORK_BURSTS[i] && effect.markOnce(10 + i)) {
                 fireworkBurst(world, senderAnchor(client, effect.sender).add(0.0, 1.4, 0.0));
@@ -61,17 +62,17 @@ public final class WorldFx {
         }
     }
 
-    private static void tickNuke(MinecraftClient client, ClientWorld world, ActiveEffect effect, long elapsed, long now) {
+    private static void tickNuke(Minecraft client, ClientLevel world, ActiveEffect effect, long elapsed, long now) {
         if (effect.target == null) {
             effect.target = groundTarget(client);
             effect.anchor = effect.target.add(0.0, 46.0, 0.0);
         }
-        Vec3d target = effect.target;
-        Vec3d anchor = effect.anchor;
+        Vec3 target = effect.target;
+        Vec3 anchor = effect.anchor;
 
         if (elapsed < Timelines.NUKE_FALL_END) {
             float progress = Easing.inQuad(elapsed / (float) Timelines.NUKE_FALL_END);
-            Vec3d pos = anchor.add(target.subtract(anchor).multiply(progress));
+            Vec3 pos = anchor.add(target.subtract(anchor).multiply(progress, progress, progress));
             if (effect.every(now, 55L)) {
                 world.addParticle(ParticleTypes.CLOUD, pos.x + jitter(0.35), pos.y + 2.4, pos.z + jitter(0.35), 0.0, -0.02, 0.0);
                 world.addParticle(ParticleTypes.LARGE_SMOKE, pos.x + jitter(0.3), pos.y + 2.8, pos.z + jitter(0.3), 0.0, 0.03, 0.0);
@@ -90,11 +91,11 @@ public final class WorldFx {
         }
     }
 
-    private static void tickBlackHole(MinecraftClient client, ClientWorld world, ActiveEffect effect, long elapsed, long now) {
+    private static void tickBlackHole(Minecraft client, ClientLevel world, ActiveEffect effect, long elapsed, long now) {
         if (effect.anchor == null) {
             effect.anchor = frontOfCamera(client, 7.5D);
         }
-        Vec3d center = effect.anchor;
+        Vec3 center = effect.anchor;
 
         if (elapsed < Timelines.BH_COLLAPSE_END) {
             float progress = Easing.clamp01(elapsed / (float) Timelines.BH_COLLAPSE_END);
@@ -102,9 +103,9 @@ public final class WorldFx {
             for (int i = 0; i < 7; i++) {
                 double angle = RANDOM.nextDouble() * Math.PI * 2.0D + progress * 6.0D;
                 double r = radius * (0.45D + RANDOM.nextDouble() * 0.9D);
-                Vec3d pos = center.add(Math.cos(angle) * r, jitter(0.8) * (1.0D - progress * 0.5D), Math.sin(angle) * r);
-                Vec3d inward = center.subtract(pos).normalize().multiply(0.18D + progress * 0.75D);
-                ParticleEffect type = i % 3 == 0 ? ParticleTypes.END_ROD
+                Vec3 pos = center.add(Math.cos(angle) * r, jitter(0.8) * (1.0D - progress * 0.5D), Math.sin(angle) * r);
+                Vec3 inward = center.subtract(pos).normalize().multiply(0.18D + progress * 0.75D, 0.18D + progress * 0.75D, 0.18D + progress * 0.75D);
+                ParticleOptions type = i % 3 == 0 ? ParticleTypes.END_ROD
                         : (i % 3 == 1 ? ParticleTypes.PORTAL : ParticleTypes.ELECTRIC_SPARK);
                 world.addParticle(type, pos.x, pos.y, pos.z, inward.x, inward.y, inward.z);
             }
@@ -136,7 +137,7 @@ public final class WorldFx {
 
     // ------------------------------------------------------------------ particles
 
-    private static void fireworkBurst(ClientWorld world, Vec3d at) {
+    private static void fireworkBurst(ClientLevel world, Vec3 at) {
         for (int i = 0; i < 46; i++) {
             double theta = RANDOM.nextDouble() * Math.PI * 2.0D;
             double phi = Math.acos(2.0D * RANDOM.nextDouble() - 1.0D);
@@ -151,7 +152,7 @@ public final class WorldFx {
         world.addParticle(ParticleTypes.EXPLOSION, at.x, at.y, at.z, 0.0, 0.0, 0.0);
     }
 
-    private static void nukeImpact(ClientWorld world, Vec3d at) {
+    private static void nukeImpact(ClientLevel world, Vec3 at) {
         world.addParticle(ParticleTypes.EXPLOSION_EMITTER, at.x, at.y + 1.5, at.z, 0.0, 0.0, 0.0);
         for (int i = 0; i < 90; i++) {
             double theta = RANDOM.nextDouble() * Math.PI * 2.0D;
@@ -159,13 +160,13 @@ public final class WorldFx {
             double vx = Math.cos(theta) * speed;
             double vz = Math.sin(theta) * speed;
             double vy = 0.2D + RANDOM.nextDouble() * 0.9D;
-            ParticleEffect type = i % 4 == 0 ? ParticleTypes.FIREWORK
+            ParticleOptions type = i % 4 == 0 ? ParticleTypes.FIREWORK
                     : (i % 4 == 1 ? ParticleTypes.FLAME : (i % 4 == 2 ? ParticleTypes.LARGE_SMOKE : ParticleTypes.CLOUD));
             world.addParticle(type, at.x + vx, at.y + 0.4D, at.z + vz, vx * 0.5D, vy, vz * 0.5D);
         }
         for (int i = 0; i < 18; i++) {
-            world.addParticle(ParticleTypes.FLASH, at.x + jitter(2.5), at.y + 1.0D + RANDOM.nextDouble() * 2.0D,
-                    at.z + jitter(2.5), 0.0, 0.0, 0.0);
+            world.addParticle(ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFFFFF),
+                    at.x + jitter(2.5), at.y + 1.0D + RANDOM.nextDouble() * 2.0D, at.z + jitter(2.5), 0.0, 0.0, 0.0);
         }
         for (int i = 0; i < 30; i++) {
             world.addParticle(ParticleTypes.SMOKE, at.x + jitter(1.5), at.y + 0.3D, at.z + jitter(1.5),
@@ -173,7 +174,7 @@ public final class WorldFx {
         }
     }
 
-    private static void mushroomCloud(ClientWorld world, Vec3d at, float progress) {
+    private static void mushroomCloud(ClientLevel world, Vec3 at, float progress) {
         float t = Easing.clamp01(progress);
         double radius = 1.5D + t * 4.0D;
         for (int i = 0; i < 3; i++) {
@@ -190,8 +191,8 @@ public final class WorldFx {
         }
     }
 
-    private static void supernova(ClientWorld world, Vec3d center) {
-        world.addParticle(ParticleTypes.FLASH, center.x, center.y, center.z, 0.0, 0.0, 0.0);
+    private static void supernova(ClientLevel world, Vec3 center) {
+        world.addParticle(ColorParticleOption.create(ParticleTypes.FLASH, 0xFFFFFFFF), center.x, center.y, center.z, 0.0, 0.0, 0.0);
         world.addParticle(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y, center.z, 0.0, 0.0, 0.0);
         for (int i = 0; i < 140; i++) {
             double theta = RANDOM.nextDouble() * Math.PI * 2.0D;
@@ -200,7 +201,7 @@ public final class WorldFx {
             double vx = Math.sin(phi) * Math.cos(theta) * speed;
             double vy = Math.cos(phi) * speed;
             double vz = Math.sin(phi) * Math.sin(theta) * speed;
-            ParticleEffect type = i % 5 == 0 ? ParticleTypes.FIREWORK
+            ParticleOptions type = i % 5 == 0 ? ParticleTypes.FIREWORK
                     : (i % 5 == 1 ? ParticleTypes.END_ROD
                     : (i % 5 == 2 ? ParticleTypes.ELECTRIC_SPARK
                     : (i % 5 == 3 ? ParticleTypes.CRIT : ParticleTypes.WITCH)));
@@ -215,16 +216,16 @@ public final class WorldFx {
         if (effects.isEmpty()) {
             return;
         }
-        MatrixStack matrices = context.matrixStack();
-        VertexConsumerProvider provider = context.consumers();
-        Camera camera = context.camera();
-        if (matrices == null || provider == null || camera == null) {
+        PoseStack matrices = context.matrices();
+        MultiBufferSource provider = context.consumers();
+        if (matrices == null || provider == null || context.worldState() == null) {
             return;
         }
-        VertexConsumer buffer = provider.getBuffer(RenderLayer.getDebugQuads());
-        Vec3d cameraPos = camera.getPos();
-        Vector3f right = camera.getRotation().transform(new Vector3f(1.0F, 0.0F, 0.0F));
-        Vector3f up = camera.getRotation().transform(new Vector3f(0.0F, 1.0F, 0.0F));
+        VertexConsumer buffer = provider.getBuffer(RenderTypes.debugQuads());
+        Vec3 cameraPos = context.worldState().cameraRenderState.pos;
+        Quaternionf rotation = context.worldState().cameraRenderState.orientation;
+        Vector3f right = rotation.transform(new Vector3f(1.0F, 0.0F, 0.0F));
+        Vector3f up = rotation.transform(new Vector3f(0.0F, 1.0F, 0.0F));
         long now = System.currentTimeMillis();
 
         for (ActiveEffect effect : effects) {
@@ -237,14 +238,14 @@ public final class WorldFx {
         }
     }
 
-    private static void renderNuke(MatrixStack matrices, VertexConsumer buffer, Vec3d cameraPos, ActiveEffect effect, long elapsed) {
-        Vec3d target = effect.target;
+    private static void renderNuke(PoseStack matrices, VertexConsumer buffer, Vec3 cameraPos, ActiveEffect effect, long elapsed) {
+        Vec3 target = effect.target;
         if (target == null) {
             return;
         }
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(target.x - cameraPos.x, target.y - cameraPos.y, target.z - cameraPos.z);
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        Matrix4f matrix = matrices.last().pose();
 
         if (elapsed < Timelines.NUKE_FALL_END + 300L) {
             float pulse = Easing.wave((float) elapsed, 500.0D);
@@ -256,16 +257,16 @@ public final class WorldFx {
 
         if (elapsed < Timelines.NUKE_FALL_END && effect.anchor != null) {
             float progress = Easing.inQuad(elapsed / (float) Timelines.NUKE_FALL_END);
-            Vec3d pos = effect.anchor.add(target.subtract(effect.anchor).multiply(progress));
-            matrices.push();
+            Vec3 pos = effect.anchor.add(target.subtract(effect.anchor).multiply(progress, progress, progress));
+            matrices.pushPose();
             matrices.translate(pos.x - target.x, pos.y - target.y, pos.z - target.z);
-            drawNukeModel(buffer, matrices.peek().getPositionMatrix(), elapsed);
-            matrices.pop();
+            drawNukeModel(buffer, matrices.last().pose(), elapsed);
+            matrices.popPose();
         } else if (elapsed >= Timelines.NUKE_FALL_END) {
             renderShockwave(buffer, matrix, elapsed - Timelines.NUKE_FALL_END);
         }
 
-        matrices.pop();
+        matrices.popPose();
     }
 
     private static void drawNukeModel(VertexConsumer buffer, Matrix4f matrix, long elapsed) {
@@ -308,15 +309,15 @@ public final class WorldFx {
         }
     }
 
-    private static void renderBlackHole(MatrixStack matrices, VertexConsumer buffer, Vec3d cameraPos,
+    private static void renderBlackHole(PoseStack matrices, VertexConsumer buffer, Vec3 cameraPos,
                                        Vector3f right, Vector3f up, ActiveEffect effect, long elapsed) {
-        Vec3d center = effect.anchor;
+        Vec3 center = effect.anchor;
         if (center == null) {
             return;
         }
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(center.x - cameraPos.x, center.y - cameraPos.y, center.z - cameraPos.z);
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        Matrix4f matrix = matrices.last().pose();
 
         // Tilted accretion disk basis (view aligned, squashed on one axis).
         float tilt = 0.35F;
@@ -359,7 +360,7 @@ public final class WorldFx {
                         color(Math.round(alpha * 0.7F), 255, 210, 120), 80);
             }
         }
-        matrices.pop();
+        matrices.popPose();
     }
 
     // ------------------------------------------------------------------ shake
@@ -404,22 +405,22 @@ public final class WorldFx {
 
     // ------------------------------------------------------------------ helpers
 
-    static Vec3d frontOfCamera(MinecraftClient client, double distance) {
+    static Vec3 frontOfCamera(Minecraft client, double distance) {
         if (client.player == null) {
-            return Vec3d.ZERO;
+            return Vec3.ZERO;
         }
-        Vec3d eye = client.player.getEyePos();
-        return eye.add(client.player.getRotationVec(1.0F).multiply(distance));
+        Vec3 eye = client.player.getEyePosition();
+        return eye.add(client.player.getViewVector(1.0F).multiply(distance, distance, distance));
     }
 
-    private static Vec3d senderAnchor(MinecraftClient client, String name) {
-        if (client.world != null) {
-            for (AbstractClientPlayerEntity player : client.world.getPlayers()) {
-                if (!player.getGameProfile().getName().equalsIgnoreCase(name)) {
+    private static Vec3 senderAnchor(Minecraft client, String name) {
+        if (client.level != null) {
+            for (AbstractClientPlayer player : client.level.players()) {
+                if (!player.getGameProfile().name().equalsIgnoreCase(name)) {
                     continue;
                 }
-                Vec3d pos = player.getPos();
-                if (client.player == null || pos.squaredDistanceTo(client.player.getPos()) < 48.0D * 48.0D) {
+                Vec3 pos = player.position();
+                if (client.player == null || pos.distanceToSqr(client.player.position()) < 48.0D * 48.0D) {
                     return pos.add(0.0, 1.2, 0.0);
                 }
             }
@@ -427,22 +428,22 @@ public final class WorldFx {
         return frontOfCamera(client, 6.0D);
     }
 
-    private static Vec3d groundTarget(MinecraftClient client) {
-        if (client.player == null || client.world == null) {
-            return Vec3d.ZERO;
+    private static Vec3 groundTarget(Minecraft client) {
+        if (client.player == null || client.level == null) {
+            return Vec3.ZERO;
         }
-        Vec3d eye = client.player.getEyePos();
-        Vec3d look = client.player.getRotationVec(1.0F);
-        Vec3d flat = new Vec3d(look.x, 0.0, look.z);
-        if (flat.lengthSquared() < 1.0E-4D) {
-            flat = new Vec3d(0.0, 0.0, 1.0);
+        Vec3 eye = client.player.getEyePosition();
+        Vec3 look = client.player.getViewVector(1.0F);
+        Vec3 flat = new Vec3(look.x, 0.0, look.z);
+        if (flat.lengthSqr() < 1.0E-4D) {
+            flat = new Vec3(0.0, 0.0, 1.0);
         }
-        flat = flat.normalize().multiply(7.0D);
+        flat = flat.normalize().multiply(7.0D, 7.0D, 7.0D);
         double x = eye.x + flat.x;
         double z = eye.z + flat.z;
-        int top = client.world.getTopY(Heightmap.Type.MOTION_BLOCKING, (int) Math.floor(x), (int) Math.floor(z));
+        int top = client.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) Math.floor(x), (int) Math.floor(z));
         double y = Math.min(top, client.player.getY() + 1.0D);
-        return new Vec3d(x, y + 0.05D, z);
+        return new Vec3(x, y + 0.05D, z);
     }
 
     private static double jitter(double amount) {
@@ -477,10 +478,10 @@ public final class WorldFx {
                              float ax, float ay, float az, float bx, float by, float bz,
                              float cx, float cy, float cz, float dx, float dy, float dz,
                              float red, float green, float blue, float alpha) {
-        buffer.vertex(matrix, ax, ay, az).color(red, green, blue, alpha).next();
-        buffer.vertex(matrix, bx, by, bz).color(red, green, blue, alpha).next();
-        buffer.vertex(matrix, cx, cy, cz).color(red, green, blue, alpha).next();
-        buffer.vertex(matrix, dx, dy, dz).color(red, green, blue, alpha).next();
+        buffer.addVertex(matrix, ax, ay, az).setColor(red, green, blue, alpha);
+        buffer.addVertex(matrix, bx, by, bz).setColor(red, green, blue, alpha);
+        buffer.addVertex(matrix, cx, cy, cz).setColor(red, green, blue, alpha);
+        buffer.addVertex(matrix, dx, dy, dz).setColor(red, green, blue, alpha);
     }
 
     private static void groundRing(VertexConsumer buffer, Matrix4f matrix, float y, float radius,
@@ -550,11 +551,10 @@ public final class WorldFx {
 
     private static void offsetVertex(VertexConsumer buffer, Matrix4f matrix, Vector3f right, Vector3f up,
                                      float x, float y, float red, float green, float blue, float alpha) {
-        buffer.vertex(matrix,
+        buffer.addVertex(matrix,
                         right.x * x + up.x * y,
                         right.y * x + up.y * y,
                         right.z * x + up.z * y)
-                .color(red, green, blue, alpha)
-                .next();
+                .setColor(red, green, blue, alpha);
     }
 }

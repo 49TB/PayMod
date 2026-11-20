@@ -1,7 +1,7 @@
 package com.paymentfx.effect;
 
 import com.paymentfx.config.PaymentFxConfig;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,7 +33,7 @@ public final class EffectManager {
         SoundFx.triggerFor(effect);
     }
 
-    public void tick(MinecraftClient client) {
+    public void tick(Minecraft client) {
         PaymentFxConfig config = PaymentFxConfig.get();
         if (!config.enabled) {
             if (!effects.isEmpty()) {
@@ -46,7 +46,7 @@ public final class EffectManager {
         Iterator<ActiveEffect> iterator = effects.iterator();
         while (iterator.hasNext()) {
             ActiveEffect effect = iterator.next();
-            if (client.world != null && client.player != null) {
+            if (client.level != null && client.player != null) {
                 WorldFx.tick(client, effect, now);
             }
             if (effect.isFinished(now)) {

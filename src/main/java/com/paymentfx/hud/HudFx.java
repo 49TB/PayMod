@@ -7,10 +7,11 @@ import com.paymentfx.effect.Tier;
 import com.paymentfx.effect.Timelines;
 import com.paymentfx.util.Easing;
 import com.paymentfx.util.Skins;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
@@ -23,22 +24,22 @@ public final class HudFx {
     private HudFx() {
     }
 
-    public static void render(DrawContext context, float tickDelta) {
+    public static void render(GuiGraphics context, DeltaTracker tickCounter) {
         PaymentFxConfig config = PaymentFxConfig.get();
         if (!config.enabled) {
             return;
         }
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.options.hudHidden) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.options.hideGui) {
             return;
         }
         List<ActiveEffect> effects = EffectManager.INSTANCE.effects();
         if (effects.isEmpty()) {
             return;
         }
-        TextRenderer renderer = client.textRenderer;
-        int screenWidth = context.getScaledWindowWidth();
-        int screenHeight = context.getScaledWindowHeight();
+        Font renderer = client.font;
+        int screenWidth = context.guiWidth();
+        int screenHeight = context.guiHeight();
         long now = System.currentTimeMillis();
 
         int toastIndex = 0;
@@ -67,7 +68,7 @@ public final class HudFx {
 
     // ------------------------------------------------------------------ tier 1
 
-    private static void renderToast(DrawContext context, TextRenderer renderer, ActiveEffect effect, long now,
+    private static void renderToast(GuiGraphics context, Font renderer, ActiveEffect effect, long now,
                                     int screenWidth, int index) {
         long elapsed = effect.elapsed(now);
         float in = Easing.clamp01(elapsed / 280.0F);
@@ -88,18 +89,18 @@ public final class HudFx {
         context.fill(x - 3, y + 6, x, y + TOAST_HEIGHT - 6, Draw.withAlpha(0x3310FF6E, alpha));
 
         if (alpha > 0.25F) {
-            Draw.skinFigure(context, Skins.lookup(effect.sender).texture(), x + 12, y + 8, 1.42F);
+            Draw.skinFigure(context, Skins.texture(effect.sender), x + 12, y + 8, 1.42F);
         }
 
         String name = Draw.trim(renderer, effect.sender, TOAST_WIDTH - 56);
-        context.drawText(renderer, Text.literal(name), x + 44, y + 15, Draw.withAlpha(0xFFFFD24A, alpha), true);
-        context.drawText(renderer, "paid " + effect.amountText, x + 44, y + 29, Draw.withAlpha(0xFFFFFFFF, alpha), true);
-        context.drawText(renderer, "received", x + 44, y + 43, Draw.withAlpha(0x8899AFA0, alpha), false);
+        context.drawString(renderer, name, x + 44, y + 15, Draw.withAlpha(0xFFFFD24A, alpha), true);
+        context.drawString(renderer, "paid " + effect.amountText, x + 44, y + 29, Draw.withAlpha(0xFFFFFFFF, alpha), true);
+        context.drawString(renderer, "received", x + 44, y + 43, Draw.withAlpha(0x8899AFA0, alpha), false);
     }
 
     // ------------------------------------------------------------------ tier 2
 
-    private static void renderBanner(DrawContext context, TextRenderer renderer, ActiveEffect effect, long now,
+    private static void renderBanner(GuiGraphics context, Font renderer, ActiveEffect effect, long now,
                                      int screenWidth) {
         long elapsed = effect.elapsed(now);
         float in = Easing.clamp01(elapsed / 320.0F);
@@ -110,9 +111,9 @@ public final class HudFx {
         }
         float slide = 1.0F - Easing.outCubic(in);
         float nameScale = Draw.fitScale(renderer, effect.sender, 2.0F, screenWidth - 90);
-        int nameWidth = Math.round(renderer.getWidth(effect.sender) * nameScale);
+        int nameWidth = Math.round(renderer.width(effect.sender) * nameScale);
         String line = "paid you " + effect.amountText;
-        int panelWidth = Math.max(280, Math.max(nameWidth, renderer.getWidth(line)) + 56);
+        int panelWidth = Math.max(280, Math.max(nameWidth, renderer.width(line)) + 56);
         int panelHeight = 56;
         int x = (screenWidth - panelWidth) / 2;
         int y = 14 - Math.round(slide * 60.0F);
@@ -128,13 +129,13 @@ public final class HudFx {
 
         Draw.gradientTextV(context, renderer, effect.sender, (screenWidth - nameWidth) / 2, y + 8, nameScale,
                 Draw.withAlpha(0xFFFFE3A2, alpha), Draw.withAlpha(0xFFFF9A16, alpha), true);
-        context.drawCenteredTextWithShadow(renderer, Text.literal(line), screenWidth / 2,
-                y + 10 + Math.round(renderer.fontHeight * nameScale) + 2, Draw.withAlpha(0xFFFFFFFF, alpha));
+        context.drawCenteredString(renderer, Component.literal(line), screenWidth / 2,
+                y + 10 + Math.round(renderer.lineHeight * nameScale) + 2, Draw.withAlpha(0xFFFFFFFF, alpha));
     }
 
     // ------------------------------------------------------------------ tier 4
 
-    private static void renderNuke(DrawContext context, TextRenderer renderer, ActiveEffect effect, long now,
+    private static void renderNuke(GuiGraphics context, Font renderer, ActiveEffect effect, long now,
                                    int screenWidth) {
         long elapsed = effect.elapsed(now);
         if (elapsed < Timelines.NUKE_FALL_END + 250L) {
@@ -143,7 +144,7 @@ public final class HudFx {
             int flashColor = Draw.mix(0xFFFFFFFF, 0xFFFF3B30, blink);
             String title = "\u26A0 NUKE INCOMING \u26A0";
             float scale = Draw.fitScale(renderer, title, 2.4F, screenWidth - 130);
-            int titleWidth = Math.round(renderer.getWidth(title) * scale);
+            int titleWidth = Math.round(renderer.width(title) * scale);
             int centerX = screenWidth / 2;
             int y = 14;
 
@@ -159,22 +160,22 @@ public final class HudFx {
             warningTriangle(context, centerX + titleWidth / 2 + 16, y + 4, 14, triangleColor);
 
             Draw.textCentered(context, renderer, title, centerX, y + 2, scale, Draw.withAlpha(flashColor, alpha), true);
-            context.drawCenteredTextWithShadow(renderer, Text.literal("from " + effect.sender), centerX, y + 30,
+            context.drawCenteredString(renderer, Component.literal("from " + effect.sender), centerX, y + 30,
                     Draw.withAlpha(0xFFFFFFFF, alpha));
         }
 
         if (elapsed >= Timelines.NUKE_TEXT_FROM) {
             float alpha = Easing.clamp01((elapsed - Timelines.NUKE_TEXT_FROM) / 420.0F);
             float scale = Draw.fitScale(renderer, effect.sender, 2.4F, screenWidth - 70);
-            int nameWidth = Math.round(renderer.getWidth(effect.sender) * scale);
+            int nameWidth = Math.round(renderer.width(effect.sender) * scale);
             Draw.gradientTextV(context, renderer, effect.sender, (screenWidth - nameWidth) / 2, 26, scale,
                     Draw.withAlpha(0xFFFFE0A0, alpha), Draw.withAlpha(0xFFFF7A1A, alpha), true);
-            context.drawCenteredTextWithShadow(renderer, Text.literal("paid you " + effect.amountText), screenWidth / 2,
-                    30 + Math.round(renderer.fontHeight * scale) + 4, Draw.withAlpha(0xFFFFFFFF, alpha));
+            context.drawCenteredString(renderer, Component.literal("paid you " + effect.amountText), screenWidth / 2,
+                    30 + Math.round(renderer.lineHeight * scale) + 4, Draw.withAlpha(0xFFFFFFFF, alpha));
         }
     }
 
-    private static void warningTriangle(DrawContext context, int centerX, int topY, int size, int color) {
+    private static void warningTriangle(GuiGraphics context, int centerX, int topY, int size, int color) {
         for (int row = 0; row < size; row++) {
             int half = row / 2;
             context.fill(centerX - half, topY + row, centerX + half + 1, topY + row + 1, color);
@@ -183,7 +184,7 @@ public final class HudFx {
 
     // ------------------------------------------------------------------ tier 5
 
-    private static void renderBlackHole(DrawContext context, TextRenderer renderer, ActiveEffect effect, long now,
+    private static void renderBlackHole(GuiGraphics context, Font renderer, ActiveEffect effect, long now,
                                         int screenWidth) {
         long elapsed = effect.elapsed(now);
         if (elapsed < Timelines.BH_TEXT_FROM) {
@@ -194,7 +195,7 @@ public final class HudFx {
         float alpha = Easing.clamp01((elapsed - Timelines.BH_TEXT_FROM) / 480.0F);
         String line = effect.sender + " paid you " + effect.amountText;
         float scale = Draw.fitScale(renderer, line, 2.8F, screenWidth - 50);
-        int lineWidth = Math.round(renderer.getWidth(line) * scale);
+        int lineWidth = Math.round(renderer.width(line) * scale);
         int x = (screenWidth - lineWidth) / 2;
         int y = 30;
 
@@ -212,7 +213,7 @@ public final class HudFx {
 
     // ------------------------------------------------------------------ flash
 
-    private static void renderFlash(DrawContext context, ActiveEffect effect, long now, int screenWidth, int screenHeight) {
+    private static void renderFlash(GuiGraphics context, ActiveEffect effect, long now, int screenWidth, int screenHeight) {
         long elapsed = effect.elapsed(now);
         if (effect.tier == Tier.NUKE) {
             long start = Timelines.NUKE_FALL_END;
